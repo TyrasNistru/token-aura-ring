@@ -47,7 +47,7 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
         },
     };
 
-    auraRings = [];
+    auraRings = {};
 
     currentTab = 0;
 
@@ -65,6 +65,11 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
     get title()
     {
         return `Aura Ring Configuration: ${this.preview.name}`;
+    }
+
+    get tokenId()
+    {
+        return this.preview.id;
     }
 
     // Setters
@@ -123,19 +128,20 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
 
     _prepareContext(options)
     {
-        const auraRings = this.auraRings.sort(AuraRingSettings.sortAuraRings);
-        if (this.currentTab === null && auraRings.length > 0) {
-            this.currentTab = auraRings[0].id;
+        const auraRings = this.auraRings;
+        const auraKeys = Object.keys(auraRings).sort();
+        if (this.currentTab === null && auraKeys.length > 0) {
+            this.currentTab = auraRings[auraKeys[0]].id;
         }
 
-        const dataModels = [];
+        const dataModels = {};
 
-        for (const auraRing of auraRings) {
+        for (const auraKey of auraKeys) {
             try {
-                dataModels.push(new AuraRingDataModel(auraRing));
+                dataModels[auraKey] = new AuraRingDataModel(auraRings[auraKey]);
             } catch (error) {
                 console.error('A malformed Aura Ring was detected; removing.');
-                this.deleteAuraRing(auraRing.id);
+                this.deleteAuraRing(auraRings[auraKey].id);
             }
         }
 
@@ -215,15 +221,13 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
 
     static async handleForm(event, form, formData)
     {
-        AuraRingFlags.setAuraRings(
-            this.preview, 
-            this.gatherFormData(formData),
-        );
+        const newAuraRings = this.gatherFormData(formData);
+        await AuraRingFlags.setAuraRings(this.preview, newAuraRings);
     }
 
     static async handleOpenDirectory()
     {
-        AuraRingDirectory.open(this.preview);
+        AuraRingDirectory.open(this);
     }
 
     static async handlePaste()
@@ -251,14 +255,22 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
     }
 
     // Aura Rings
-    addAuraRing()
+    addAuraRing(auraRing = null)
     {
         const id = AuraRingFlags.nextAvailableId(this.auraRings);
+        const auraKey = `aura${id}`;
+        let newAuraRing;
 
-        this.auraRings.push({
-            id: id,
-            name: 'New Aura Ring',
-        });
+        if (auraRing)
+            newAuraRing = {...auraRing, id};
+        else {
+            newAuraRing = {
+                id,
+                name: 'New Aura Ring',
+            };
+        }        
+
+        this.auraRings[auraKey] = newAuraRing;
 
         this.currentTab = id;
         this.render();
@@ -290,11 +302,7 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
 
     deleteAuraRing(id)
     {
-        this.auraRings.splice(
-            this.getAuraRingIndex(id),
-            1,
-        );
-
+        delete this.auraRings[`aura${id}`];
         this.currentTab = null;
         this.render();
     }
@@ -307,31 +315,14 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
     {
         const clone = this.cloneAuraRing(id);
         clone.id = AuraRingFlags.nextAvailableId(this.auraRings);
-        this.auraRings.push(clone);
+        this.auraRings[`aura${clone.id}`] = clone;
         this.currentTab = clone.id;
         this.render();
     }
 
     getAuraRing(id)
     {
-        for (const auraRing of this.auraRings) {
-            if (auraRing.id === id) {
-                return auraRing;
-            }
-        }
-
-        return false;
-    }
-
-    getAuraRingIndex(id)
-    {
-        for (let index = 0; index < this.auraRings.length; ++index) {
-            if (this.auraRings[index].id === id) {
-                return index;
-            }
-        }
-
-        return false;
+        return this.auraRings[`aura${id}`];
     }
 
     /**
@@ -343,7 +334,7 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
 
         if (clone !== null) {
             clone.id = AuraRingFlags.nextAvailableId(this.auraRings);
-            this.auraRings.push(clone);
+            this.auraRings[`aura${clone.id}`] = clone;
             this.currentTab = clone.id;
             this.render();
         }
@@ -351,15 +342,13 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
 
     renameAuraRing(id, name)
     {
-        const index = this.getAuraRingIndex(id);
-        this.auraRings[index].name = name;
+        this.auraRings[`aura${id}`].name = name;
         this.render();
     }
 
     toggleHideAuraRing(id)
     {
-        const index = this.getAuraRingIndex(id);
-        this.auraRings[index].hide = !this.auraRings[index].hide;
+        this.auraRings[`aura${id}`].hide = !this.auraRings[`aura${id}`].hide;
         this.render();
     }
 
@@ -434,7 +423,7 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
     gatherFormData(formData)
     {
         const data = {};
-        const newAuraRings = [];
+        const newAuraRings = {};
 
         for (const field in formData.object) {
             const index = field.indexOf('_');
@@ -454,7 +443,7 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
         }
 
         for (const key in data) {
-            newAuraRings.push(data[key]);
+            newAuraRings[`aura${data[key].id}`] = data[key];
         }
 
         return newAuraRings;
@@ -465,8 +454,8 @@ export class AuraRingSettings extends HandlebarsApplicationMixin(ApplicationV2)
         const formData = new FormDataExtended(form);
         const newAuraRings = this.gatherFormData(formData);
 
-        for (let index = 0; index < newAuraRings.length; ++index) {
-            this.auraRings[index] = newAuraRings[index];
+        for (const key in newAuraRings) {
+            this.auraRings[key] = newAuraRings[key];
         }
 
         AuraRingCanvas.handleRefreshToken(this.preview.object);

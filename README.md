@@ -4,6 +4,75 @@ A module for Foundry VTT which adds outlined aura rings to a token.
 
 ![How token aura rings appear to the game master](images/gm.jpg)
 
+## Disclaimer
+
+This is a temporary fork of the [original project](https://github.com/AnthonyEdmonds/token-aura-ring) that allows creation/changing an aura through ATL.
+
+As soon this feature gets implemented on the original repo, I'll take this one down. Until then, I'll do my best to backport any update he makes on his repo to this one.
+
+All credit for the module goes to it's creator, [Anthony Edmonds](https://github.com/AnthonyEdmonds/token-aura-ring).
+
+## ATE usage
+
+You can access the fields of the auras through:
+
+`ATL.flags.token-aura-ring.aura-rings.[auraKey]`
+
+Where `[auraKey]` is the unique aura key for each aura.
+You can see the aura key on the Aura settings panel, alongside its name:
+
+![How aura keys are shown on the settings panel](images/aurakey.jpg)
+
+example:
+
+```
+ATL.flags.token-aura-ring.aura-rings.aura1.hide         OVERRIDE        false           20
+```
+
+Each aura has the following properties:
+
+| Attribute Key                                                    | Effect Value    | Description            |
+| ---------------------------------------------------------------- | --------------- | ---------------------- |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].name`            | `[string]`      | Name                   |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].visibility`      | `[string*]`     | Visible to (see below) |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].use_grid_shapes` | `[boolean]`     | Use grid-based shapes  |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].hide`            | `[boolean]`     | Hide Aura Ring         |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].respect_fog`     | `[boolean]`     | Respect fog of war     |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].hover_only`      | `[boolean]`     | Only show on hover     |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].owner_only`      | `[boolean]`     | Only show for owner    |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].radius`          | `[0, Infinity]` | Radius (ft)            |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].angle`           | `[0, 360]`      | Angle (degrees)        |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].direction`       | `[-180, 180]`   | Direction (degrees)    |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].stroke_colour`   | `[color]`       | Stroke Color           |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].stroke_opacity`  | `[0, 1]`        | Stroke Opacity         |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].stroke_weight`   | `[1, 16]`       | Stroke Weight (pixels) |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].stroke_close`    | `[boolean]`     | Close Stroke           |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].fill_colour`     | `[color]`       | Fill Color             |
+| `ATL.flags.token-aura-ring.aura-rings.[auraKey].fill_opacity`    | `[0, 1]`        | Fill Opacity           |
+
+> <details>
+> <summary>Visibility</summary>
+>
+> | Visibility     | Value        |
+> | -------------- | ------------ |
+> | None           | `NONE`       |
+> | Player         | `PLAYER`     |
+> | Trusted Player | `TRUSTED`    |
+> | Assistant GM   | `ASSISTANT`  |
+> | Game Master    | `GAMEMASTER` |
+>
+> Source: `CONST.USER_ROLE_NAMES`
+>
+> </details>
+
+## WARNING
+
+To allow ATE/ATL to manipulate the auras, the underlying structure had to be migrated to a new structure.
+
+If you're coming from the original module, the auras currently on the tokens will be migrated to a new structure used by this version.
+
+If, at some point, you wish to go back to the official version, <i><b>BE SURE TO BACKUP YOUR AURAS IN THE AURA DIRECTORY.</b></i> The aura directory isn't affected by this, so any aura there <i>should</i> be safe. You have been warned.
+
 ## About
 
 This Foundry VTT module allows you to add and customise aura rings emanated from a token, ideal for cleanly representing the range of aura type effects without obscuring the map.
@@ -40,14 +109,14 @@ Once enabled, you can add and configure aura rings from the "Confgiure Token Aur
 
 Settings are fully previewed, and are not stored until you press "Save Changes" and "Update Token".
 
-* Press "Add Aura Ring" to create a new blank Aura Ring
-* Press "Open Directory..." to view your stored Aura Rings
-* Press "Paste Aura Ring" on any Token to paste from the clipboard
-* Press "Save Changes" to save your Aura Rings
-* Press "Duplicate Aura Ring" to duplicate the current Aura Ring on the same Token
-* Press "Save to Directory" to store the current Aura Ring in the Directory
-* Press "Copy Aura Ring" to copy the current Aura Ring to the clipboard
-* Press "Delete Aura Ring" to delete the current Aura Ring
+- Press "Add Aura Ring" to create a new blank Aura Ring
+- Press "Open Directory..." to view your stored Aura Rings
+- Press "Paste Aura Ring" on any Token to paste from the clipboard
+- Press "Save Changes" to save your Aura Rings
+- Press "Duplicate Aura Ring" to duplicate the current Aura Ring on the same Token
+- Press "Save to Directory" to store the current Aura Ring in the Directory
+- Press "Copy Aura Ring" to copy the current Aura Ring to the clipboard
+- Press "Delete Aura Ring" to delete the current Aura Ring
 
 ### Stroke and fill
 
@@ -153,19 +222,19 @@ Module developers can control Aura Rings using the `AuraRingApi` class.
 
 Macro developers can control Aura Rings using the `TokenAuraRing` global variable.
 
-| Function  | Parameters                        | Returns          | Description |
-|-----------|-----------------------------------|------------------|-------------|
-| all       | TokenDocument                     | Array[AuraRing]  | Retrieve all Aura Rings |
-| blank     |                                   | AuraRing         | Get an unsaved empty Aura Ring without an ID |
-| delete    | TokenDocument, id                 |                  | Remove an Aura Ring |
-| deleteAll | TokenDocument                     |                  | Remove all Aura Rings |
-| directory | TokenDocument|null                |                  | Open the Aura Ring Directory, optionally with a pre-selected token |
+| Function  | Parameters                        | Returns          | Description                                             |
+| --------- | --------------------------------- | ---------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| all       | TokenDocument                     | Array[AuraRing]  | Retrieve all Aura Rings                                 |
+| blank     |                                   | AuraRing         | Get an unsaved empty Aura Ring without an ID            |
+| delete    | TokenDocument, id                 |                  | Remove an Aura Ring                                     |
+| deleteAll | TokenDocument                     |                  | Remove all Aura Rings                                   |
+| directory | TokenDocument                     | null             |                                                         | Open the Aura Ring Directory, optionally with a pre-selected token |
 | get       | TokenDocument, term, field = 'id' | AuraRing\|false  | Retrieve a specific Aura Ring by a field, ID by default |
-| index     | TokenDocument                     | Object{id: name} | Retrieve a list of Aura Ring names keyed by their ID |
-| new       | TokenDocument                     | AuraRing         | Create a new Aura Ring from the default settings |
-| set       | TokenDocument, AuraRing           |                  | Add or overwrite an Aura Ring |
-| setAll    | TokenDocument, Array[AuraRing]    |                  | Overwrite all Aura Rings with a new set |
-| setValue  | TokenDocument, id, key, value     |                  | Update a specific Aura Ring value directly |
+| index     | TokenDocument                     | Object{id: name} | Retrieve a list of Aura Ring names keyed by their ID    |
+| new       | TokenDocument                     | AuraRing         | Create a new Aura Ring from the default settings        |
+| set       | TokenDocument, AuraRing           |                  | Add or overwrite an Aura Ring                           |
+| setAll    | TokenDocument, Array[AuraRing]    |                  | Overwrite all Aura Rings with a new set                 |
+| setValue  | TokenDocument, id, key, value     |                  | Update a specific Aura Ring value directly              |
 
 All changes will trigger flag updates on the SimpleTokenDocument, and can be edited in the normal UI.
 
@@ -174,14 +243,13 @@ It is left up to the module developer to ensure that any set Aura Rings are vali
 ### Macro examples
 
 #### List AuraRings
+
 This macro will list all of the Aura Rings on the selected token:
 
 1. Create a new `script` macro
 2. Paste the following:
    ```javascript
-   console.log(
-       TokenAuraRing.all(token.document),
-   );
+   console.log(TokenAuraRing.all(token.document));
    ```
 3. Select a token and run the macro to see a list of the Aura Rings on that token in the console
 
@@ -190,8 +258,8 @@ This macro will list all of the Aura Rings on the selected token:
 This macro will toggle an Aura Ring on and off:
 
 ```javascript
-const auraRing = TokenAuraRing.get(token.document, 'My Aura', 'name');
-TokenAuraRing.setValue(token.document, auraRing.id, 'hide', !auraRing.hide)
+const auraRing = TokenAuraRing.get(token.document, "My Aura", "name");
+TokenAuraRing.setValue(token.document, auraRing.id, "hide", !auraRing.hide);
 ```
 
 Replace `'My Aura'` with the name of the Aura Ring you want to toggle.

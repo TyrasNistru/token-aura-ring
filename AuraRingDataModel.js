@@ -85,7 +85,7 @@ export class AuraRingDataModel extends foundry.abstract.DataModel
         const divider = document.createElement('hr');
 
         const heading = document.createElement('h2');
-        heading.innerHTML = this.name;
+        heading.innerHTML = `<span>${this.name}</span><span class="hint" style="font-size:100%;float:right">aura${this.id}</span>`;
         heading.classList.add('border');
         section.appendChild(heading);
 
@@ -424,7 +424,7 @@ export class AuraRingDataModel extends foundry.abstract.DataModel
     {
         return AuraRingField.stringField(
             AuraRingField.dataFieldOptions(
-                'Visibile to',
+                'Visible to',
                 initial,
                 null,
                 true,

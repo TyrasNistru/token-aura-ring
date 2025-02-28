@@ -3,6 +3,8 @@ import { AuraRingDataModel } from "./AuraRingDataModel.js";
 export class AuraRingFlags
 {
     static auraRingsKey = 'aura-rings';
+    
+    static versionKey = 'version';
 
     static hook = 'flags-updated';
 
@@ -11,12 +13,16 @@ export class AuraRingFlags
     // Flags
     static getAuraRings(tokenDocument)
     {
-        if (AuraRingFlags.hasAuraRings(tokenDocument) === false) {
-            AuraRingFlags.setAuraRings(tokenDocument, []);
-            return [];
+        const version = tokenDocument.getFlag(AuraRingFlags.namespace, AuraRingFlags.versionKey);
+
+        if(!version || version < 3)
+            AuraRingFlags.migrateData(tokenDocument);
+
+        if (AuraRingFlags.hasAuraRings(tokenDocument)) {
+            return tokenDocument.getFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey);
         }
 
-        return tokenDocument.getFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey);
+        return {};
     }
 
     static hasAuraRings(tokenDocument)
@@ -25,7 +31,7 @@ export class AuraRingFlags
             return false;
         }
 
-        return tokenDocument.flags[AuraRingFlags.namespace].hasOwnProperty(AuraRingFlags.auraRingsKey) === true;
+        return tokenDocument.flags[AuraRingFlags.namespace].hasOwnProperty(AuraRingFlags.auraRingsKey);
     }
 
     /**
@@ -34,23 +40,27 @@ export class AuraRingFlags
      * @param {AuraRing} auraRings 
      * @param {boolean} directly Whether to set the flag directly, to avoid re-rendering
      */
-    static setAuraRings(tokenDocument, auraRings, directly = false)
+    static async setAuraRings(tokenDocument, auraRings, directly = false)
     {
-        directly === true
-            ? tokenDocument.flags[AuraRingFlags.namespace][AuraRingFlags.auraRingsKey] = auraRings
-            : tokenDocument.setFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey, auraRings);
-
+        if (directly) {
+            tokenDocument.flags[AuraRingFlags.namespace][AuraRingFlags.auraRingsKey] = auraRings
+        } else {
+            //We unset the flags first so any deleted auras get really deleted
+            await tokenDocument.unsetFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey);
+            await tokenDocument.setFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey, auraRings);
+        }
+        
         Hooks.call(AuraRingFlags.hook);
     }
 
     // Auras
     static nextAvailableId(auraRings)
     {
-        let potentialId = 0;
+        let potentialId = 1;
         const usedIds = [];
 
-        for (const auraRing of auraRings) {
-            usedIds.push(auraRing.id);
+        for (const key in auraRings) {
+            usedIds.push(auraRings[key].id);
         }
 
         while (potentialId < 100) {
@@ -63,31 +73,49 @@ export class AuraRingFlags
     }
 
     // Migration
-    static migrateData(tokenDocument)
+    static async migrateData(tokenDocument)
     {
-        if (AuraRingFlags.needsMigration(tokenDocument) === false) {
-           return;
+        console.log('[token-aura-ring]', 'migrateData called for token', tokenDocument.name, tokenDocument.id);
+        //Migrations are done sequentially to avoid losing data: V1 => V2 and then V2 => V3
+        if (AuraRingFlags.needsMigration(tokenDocument)) {
+            console.log('[token-aura-ring]', 'needs migration from V1');
+            //try to get the aura rings from V2
+            const auraRingsV2 = AuraRingFlags.hasAuraRings(tokenDocument) ? tokenDocument.getFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey) : [];
+    
+            for (const key in tokenDocument.flags[AuraRingFlags.namespace]) {
+                if (key === AuraRingFlags.auraRingsKey) {
+                    continue;
+                }
+    
+                const oldAuraRing = tokenDocument.getFlag(AuraRingFlags.namespace, key);
+                const newAuraRing = AuraRingFlags.migrateFromV1(
+                    oldAuraRing,
+                    AuraRingFlags.nextAvailableId(auraRingsV2),
+                    key,
+                );
+    
+                auraRingsV2.push(newAuraRing);
+                tokenDocument.unsetFlag(AuraRingFlags.namespace, key);
+            }
+            
+            await AuraRingFlags.setAuraRings(tokenDocument, auraRingsV2);
         }
 
-        const auraRings = AuraRingFlags.getAuraRings(tokenDocument);
+        if (AuraRingFlags.needsMigrationFromV2(tokenDocument)) {
+            console.log('[token-aura-ring]', 'needs migration from V2');
 
-        for (const key in tokenDocument.flags[AuraRingFlags.namespace]) {
-            if (key === AuraRingFlags.auraRingsKey) {
-                continue;
+            const auraRingsV2 = AuraRingFlags.hasAuraRings(tokenDocument) ? tokenDocument.getFlag(AuraRingFlags.namespace, AuraRingFlags.auraRingsKey) : [];
+            const auraRingsV3 = {}
+
+            let index = 1;
+            for (const auraRing of auraRingsV2) {
+                auraRingsV3[`aura${auraRing.id}`] = auraRing;
+                index++;
             }
 
-            const oldAuraRing = tokenDocument.getFlag(AuraRingFlags.namespace, key);
-            const newAuraRing = AuraRingFlags.migrateFromV1(
-                oldAuraRing,
-                AuraRingFlags.nextAvailableId(auraRings),
-                key,
-            );
-
-            auraRings.push(newAuraRing);
-            tokenDocument.unsetFlag(AuraRingFlags.namespace, key);
+            await AuraRingFlags.setAuraRings(tokenDocument, auraRingsV3);
+            await tokenDocument.setFlag(AuraRingFlags.namespace, AuraRingFlags.versionKey, 3);
         }
-
-        AuraRingFlags.setAuraRings(tokenDocument, auraRings);
     }
 
     static migrateFromV1(oldAuraRing, newId, name)
@@ -120,6 +148,14 @@ export class AuraRingFlags
             }
         }
 
+        return false;
+    }
+
+    static needsMigrationFromV2(tokenDocument)
+    {
+        if (Array.isArray(tokenDocument.flags[AuraRingFlags.namespace][AuraRingFlags.auraRingsKey]))
+            return true;
+        
         return false;
     }
 

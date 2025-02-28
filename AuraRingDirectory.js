@@ -42,13 +42,15 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
     static hook = 'directory-update';
 
     selectedTokenId = null;
+    settingsWindow = null;
 
     // Setup
-    constructor(tokenDocument = null, options={}) {
+    constructor(tokenSettingsWindow = null, options = {}) {
         super(options);
 
         this.registerHooks();
-        this.selectedTokenId = tokenDocument?.id ?? null;
+        this.settingsWindow = (tokenSettingsWindow?.constructor.name === 'AuraRingSettings') ? tokenSettingsWindow : null;
+        this.selectedTokenId = tokenSettingsWindow.tokenId;
     }
 
     async close(options = {})
@@ -106,7 +108,7 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
         return {
             auraRings: AuraRingDirectory.all(),
             hasTokens: tokens.length > 0,
-            noTokenSelected: this.selectedTokenId === null,
+            noTokenSelected: !this.selectedTokenId && !this.settingsWindow,
             tokens: tokens,
         };
     }
@@ -135,15 +137,10 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
 
     // Handlers
     static async handleAdd(event)
-    {
+    {        
         const auraName = event.target.dataset.aura;
         const tokenId = event.target.form.elements.token?.value ?? '';
-
-        if (tokenId === '') {
-            return;
-        }
-
-        AuraRingDirectory.add(auraName, tokenId);
+        AuraRingDirectory.add(auraName, this.settingsWindow, tokenId);
     }
 
     static async handleChangeToken(event)
@@ -176,15 +173,22 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
 
     /**
      * Add an Aura Ring to a specific Token in the current scene
-     * @param {string} auraName 
+     * @param {string} auraName
+     * @param {AuraRingSettings} settingsWindow
      * @param {string} tokenId 
      */
-    static add(auraName, tokenId)
+    static add(auraName, settingsWindow, tokenId)
     {
         const auraRing = AuraRingDirectory.get(auraName);
-        const tokenDocument = game.scenes.current.tokens.get(tokenId);
 
-        AuraRingApi.set(tokenDocument, auraRing);
+        if (settingsWindow) {
+            settingsWindow.addAuraRing(auraRing);
+        }
+        else if(tokenId && tokenId !== '')
+        {
+            const tokenDocument = game.scenes.current.tokens.get(tokenId);    
+            AuraRingApi.set(tokenDocument, auraRing);            
+        }
     }
 
     /**
@@ -227,6 +231,25 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
     static has(name)
     {
         return AuraRingDirectory.get(name) !== false;
+    }
+
+    /**
+     * Retrieve the key of an Aura Ring by any field
+     * 
+     * @param {AuraRing[]} auraRings 
+     * @param {number|string} term
+     * @param {string} field
+     * @returns {number|false}
+     */
+    static getAuraRingIndex(auraRings, term, field = 'id')
+    {
+        for (let index = 0; index < auraRings.length; index++) {
+            if (auraRings[index][field] == term) {
+                return index;
+            }
+        }
+
+        return false;
     }
 
     /** 
@@ -277,7 +300,7 @@ export class AuraRingDirectory extends HandlebarsApplicationMixin(ApplicationV2)
     static remove(name)
     {
         const auraRings = AuraRingDirectory.all();
-        const index = AuraRingApi.getAuraRingIndex(auraRings, name, 'name');
+        const index = AuraRingDirectory.getAuraRingIndex(auraRings, name, 'name');
 
         if (index !== false) {
             auraRings.splice(index, 1);

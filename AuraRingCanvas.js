@@ -151,12 +151,12 @@ export class AuraRingCanvas
         
         this.movePixiAuraContainer();
         
-        for (const auraRing of auraRings) {
-            if (this.shouldRender(auraRing) !== true) {
+        for (const key in auraRings) {
+            if (this.shouldRender(auraRings[key]) !== true) {
                 continue;
             }
             
-            this.renderAuraRing(auraRing);
+            this.renderAuraRing(auraRings[key]);
         }
     }
     

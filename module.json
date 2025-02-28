@@ -2,17 +2,22 @@
   "id": "token-aura-ring",
   "title": "Token Aura Ring",
   "description": "A simple module for Foundry VTT which adds an outlined ring aura to a token.",
-  "url": "https://github.com/AnthonyEdmonds/token-aura-ring",
-  "manifest": "https://raw.githubusercontent.com/AnthonyEdmonds/token-aura-ring/2.7.1/module.json",
-  "download": "https://github.com/AnthonyEdmonds/token-aura-ring/archive/refs/tags/2.7.1.zip",
+  "url": "https://github.com/TyrasNistru/token-aura-ring",
+  "manifest": "https://raw.githubusercontent.com/TyrasNistru/token-aura-ring/3.7.1/module.json",
+  "download": "https://github.com/TyrasNistru/token-aura-ring/archive/refs/tags/3.7.1.zip",
   "authors": [
     {
       "name": "Anthony Edmonds",
       "url": "https://github.com/AnthonyEdmonds",
       "flags": {}
+    },
+    {
+      "name": "Dniester Amorim de Aguiar",
+      "url": "https://github.com/TyrasNistru",
+      "flags": {}
     }
   ],
-  "version": "2.7.1",
+  "version": "3.7.1",
   "compatibility": {
     "minimum": "12",
     "verified": "12"

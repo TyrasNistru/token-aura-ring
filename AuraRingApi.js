@@ -30,7 +30,7 @@ export class AuraRingApi
      * 
      * @param {TokenDocument} tokenDocument
      * 
-     * @returns {Array[AuraRing]}
+     * @returns {Object}
      */
     static all(tokenDocument)
     {
@@ -55,11 +55,10 @@ export class AuraRingApi
      */
     static delete(tokenDocument, id)
     {
-        const auraRings = AuraRingFlags.getAuraRings(tokenDocument);
-        const index = AuraRingApi.getAuraRingIndex(auraRings, id);
+        const auraRings = AuraRingFlags.getAuraRings(tokenDocument);        
 
-        if (index !== false) {
-            auraRings.splice(index, 1);
+        if (auraRings.hasOwn(`aura${id}`) !== false) {
+            delete auraRings[`aura${id}`]
             AuraRingFlags.setAuraRings(tokenDocument, auraRings);
         }
     }
@@ -71,7 +70,7 @@ export class AuraRingApi
      */
     static deleteAll(tokenDocument)
     {
-        AuraRingFlags.setAuraRings(tokenDocument, []);
+        AuraRingFlags.setAuraRings(tokenDocument, {});
     }
 
     /**
@@ -110,28 +109,9 @@ export class AuraRingApi
      */
     static getAuraRing(auraRings, term, field = 'id')
     {
-        for (const auraRing of auraRings) {
-            if (auraRing[field] == term) {
-                return auraRing;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Retrieve the index of an Aura Ring by any field
-     * 
-     * @param {AuraRing[]} auraRings 
-     * @param {number|string} term
-     * @param {string} field
-     * @returns {AuraRing|false}
-     */
-    static getAuraRingIndex(auraRings, term, field = 'id')
-    {
-        for (let index = 0; index < auraRings.length; ++index) {
-            if (auraRings[index][field] == term) {
-                return index;
+        for (const auraKey in auraRings) {
+            if (auraRings[auraKey][field] == term) {
+                return auraRings[auraKey];
             }
         }
 
@@ -171,7 +151,7 @@ export class AuraRingApi
         const auraRing = AuraRingDataModel.defaultSettings();
 
         auraRing.id = AuraRingFlags.nextAvailableId(auraRings);
-        auraRings.push(auraRing);
+        auraRings[`aura${auraRing.id}`] = auraRing;
         AuraRingFlags.setAuraRings(tokenDocument, auraRings);
 
         return auraRing;
@@ -195,15 +175,9 @@ export class AuraRingApi
 
         if (auraRing.id === null) {
             auraRing.id = AuraRingFlags.nextAvailableId(auraRings);
-        } else {
-            const index = AuraRingApi.getAuraRingIndex(auraRings, auraRing.id);
-
-            index !== false
-                ? auraRings.splice(index, 1)
-                : auraRing.id = AuraRingFlags.nextAvailableId(auraRings);
         }
 
-        auraRings.push(auraRing);
+        auraRings[`aura${auraRing.id}`] = auraRing;
         AuraRingFlags.setAuraRings(tokenDocument, auraRings, isPreview);
     }
 
@@ -228,9 +202,8 @@ export class AuraRingApi
      */
     static setValue(tokenDocument, id, key, value)
     {
-        const auraRings = AuraRingFlags.getAuraRings(tokenDocument);
-        const index = this.getAuraRingIndex(auraRings, id);
-        auraRings[index][key] = value;
+        const auraRings = AuraRingFlags.getAuraRings(tokenDocument);        
+        auraRings[`aura${id}`][key] = value;
         AuraRingFlags.setAuraRings(tokenDocument, auraRings);
     }
 }
